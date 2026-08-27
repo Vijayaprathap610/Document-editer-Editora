@@ -27,10 +27,28 @@ const PORT = Number(process.env.PORT) || 5000;
 |--------------------------------------------------------------------------
 */
 
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+const defaultOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "https://editora-docediter.netlify.app",
+];
+
+const envOrigins = (process.env.CLIENT_URL || "")
     .split(",")
-    .map((origin) => origin.trim())
+    .map((origin) => origin.trim().replace(/\/$/, ""))
     .filter(Boolean);
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
+
+const isOriginAllowed = (origin) => {
+    if (!origin) return true;
+    const cleanOrigin = origin.trim().replace(/\/$/, "");
+    if (allowedOrigins.includes(cleanOrigin)) return true;
+    if (/^https:\/\/[a-zA-Z0-9-]+(\.netlify\.app)$/.test(cleanOrigin)) return true;
+    if (/^https:\/\/[a-zA-Z0-9-]+(\.onrender\.com)$/.test(cleanOrigin)) return true;
+    return false;
+};
 
 if (process.env.NODE_ENV === "production") {
     app.set("trust proxy", 1);
@@ -53,13 +71,7 @@ app.use(
 app.use(
     cors({
         origin: (origin, callback) => {
-            // Allow requests without Origin header
-            // such as health checks/server-to-server requests.
-            if (!origin) {
-                return callback(null, true);
-            }
-
-            if (allowedOrigins.includes(origin)) {
+            if (isOriginAllowed(origin)) {
                 return callback(null, true);
             }
 
@@ -82,6 +94,9 @@ app.use(
         allowedHeaders: [
             "Content-Type",
             "Authorization",
+            "X-Requested-With",
+            "Accept",
+            "Origin",
         ],
 
         optionsSuccessStatus: 204,
