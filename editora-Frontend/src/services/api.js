@@ -3,7 +3,7 @@ import axios from "axios";
 const api = axios.create({
     baseURL:
         import.meta.env.VITE_API_URL ||
-        "http://localhost:5000/api",
+        "http://localhost:8081/api",
 
     withCredentials: true,
 
@@ -14,6 +14,19 @@ const api = axios.create({
     timeout: 15000
 });
 
+// Attach Authorization Bearer token from localStorage if present
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem("editora_token");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Response interceptor
 api.interceptors.response.use(
     (response) => response,
 
@@ -26,9 +39,8 @@ api.interceptors.response.use(
             });
         }
 
-        if (
-            error.response.status === 401
-        ) {
+        if (error.response.status === 401) {
+            localStorage.removeItem("editora_token");
             window.dispatchEvent(
                 new CustomEvent("editora:unauthorized")
             );

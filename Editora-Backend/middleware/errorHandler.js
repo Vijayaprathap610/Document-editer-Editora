@@ -49,11 +49,12 @@ const errorHandler = (error, req, res, next) => {
     }
 
     const statusCode = error.statusCode || 500;
+    const isProduction = process.env.NODE_ENV === "production";
 
     return res.status(statusCode).json({
         success: false,
         message:
-            statusCode >= 500
+            statusCode >= 500 && isProduction
                 ? "Internal server error"
                 : error.message,
     });
